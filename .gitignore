@@ -1,0 +1,6 @@
+fast-reid/
+datasets/
+logs/
+__pycache__/
+*.pth
+.vscode/

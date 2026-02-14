@@ -1,0 +1,17 @@
+_BASE_: ../Base-bagtricks.yml
+
+MODEL:
+  BACKBONE:
+    WITH_IBN: True
+
+DATASETS:
+  NAMES: ("Market1501",)
+  TESTS: ("Market1501",)
+
+OUTPUT_DIR: logs/market1501/bagtricks_R50-ibn
+
+SOLVER:
+  MAX_EPOCH: 60
+  IMS_PER_BATCH: 16
+  AMP:
+    ENABLED: True
