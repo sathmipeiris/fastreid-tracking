@@ -1,6 +1,52 @@
-fast-reid/
+# Python and environment files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+fastreid_env/
+.venv
+
+# Virtual Environment - heavy directory
+fastreid_env/
+
+# IDE and editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Git
+.git/
+fastreid/.git/
+
+# Data and Models - Heavy files
 datasets/
 logs/
-__pycache__/
+models/
 *.pth
-.vscode/
+*.onnx
+*.pt
+
+# PyTorch and ML caches
+.torch_cache/
+.cache/
+
+# Training artifacts
+*.log
+training_*.log
+training_log.txt
+training_progress.log
+training_full.log
+training_final.log
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Project specific
+fast-reid/
+fastreid/

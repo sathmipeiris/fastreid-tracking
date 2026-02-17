@@ -1,0 +1,32 @@
+_BASE_: ../base_with_eval.yml
+
+MODEL:
+  BACKBONE:
+    WITH_IBN: True
+  HEADS:
+    WITH_BNNECK: True
+  LOSSES:
+    CE:
+      SCALE: 0.3
+    TRI:
+      SCALE: 2.0
+      HARD_MINING: True
+
+DATASETS:
+  NAMES: ("Market1501",)
+  TESTS: ("Market1501",)
+
+DATALOADER:
+  NUM_WORKERS: 0
+
+OUTPUT_DIR: logs/market1501/plateau_solver
+
+SOLVER:
+  MAX_EPOCH: 120
+  IMS_PER_BATCH: 16
+  BASE_LR: 0.0005
+  AMP:
+    ENABLED: False
+  WARMUP_ITERS: 1000
+  SCHED: MultiStepLR
+  STEPS: [40, 80, 110]

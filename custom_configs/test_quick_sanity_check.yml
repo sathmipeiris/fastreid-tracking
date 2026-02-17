@@ -1,0 +1,38 @@
+_BASE_: ./base_with_eval.yml
+
+# QUICK TEST CONFIG - Trains for only 2 epochs to verify pipeline
+# This is ONLY for testing that training, evaluation, and model saving all work
+
+MODEL:
+  BACKBONE:
+    WITH_IBN: True
+  HEADS:
+    WITH_BNNECK: True
+  LOSSES:
+    CE:
+      SCALE: 0.5
+    TRI:
+      SCALE: 1.5
+      HARD_MINING: True
+
+DATASETS:
+  NAMES: ("Market1501",)
+  TESTS: ("Market1501",)
+
+DATALOADER:
+  NUM_WORKERS: 0
+
+OUTPUT_DIR: logs/test_sanity_check
+
+SOLVER:
+  MAX_EPOCH: 4
+  IMS_PER_BATCH: 16
+  BASE_LR: 0.0005
+  AMP:
+    ENABLED: False
+  WARMUP_ITERS: 100
+  CHECKPOINT_PERIOD: 1
+
+TEST:
+  EVAL_PERIOD: 1
+  IMS_PER_BATCH: 128

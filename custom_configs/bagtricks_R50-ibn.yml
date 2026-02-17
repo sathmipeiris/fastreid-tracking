@@ -1,4 +1,4 @@
-_BASE_: ../Base-bagtricks.yml
+_BASE_: ../fast-reid/configs/Base-bagtricks.yml
 
 MODEL:
   BACKBONE:
@@ -8,10 +8,18 @@ DATASETS:
   NAMES: ("Market1501",)
   TESTS: ("Market1501",)
 
+DATALOADER:
+  NUM_WORKERS: 0
+
 OUTPUT_DIR: logs/market1501/bagtricks_R50-ibn
 
 SOLVER:
   MAX_EPOCH: 60
   IMS_PER_BATCH: 16
   AMP:
-    ENABLED: True
+    ENABLED: False
+  CHECKPOINT_PERIOD: 60
+  # Early stopping parameters
+  EARLY_STOP_PATIENCE: 10  # Stop if mAP doesn't improve for 10 epochs
+  TEST:
+    EVAL_PERIOD: 1  # Validate every epoch

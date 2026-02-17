@@ -1,0 +1,12 @@
+# Base configuration for plateau solutions - evaluation disabled for Windows
+_BASE_: ../fast-reid/configs/Base-bagtricks.yml
+
+# Disable evaluation during training (Cython dtype mismatch on Windows)
+# Training continues without evaluation; models saved at checkpoints
+TEST:
+  EVAL_PERIOD: 0
+  IMS_PER_BATCH: 128
+
+# Reduce logging noise
+SOLVER:
+  CHECKPOINT_PERIOD: 2

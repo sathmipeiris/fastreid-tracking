@@ -1,0 +1,162 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                         QUICK COMMANDS REFERENCE                           ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+⚡ MOST IMPORTANT COMMANDS (Copy-Paste Ready)
+═════════════════════════════════════════════════════════════════════════════
+
+1️⃣ TEST SOLUTION 1 (Higher Learning Rate) - TRY THIS FIRST
+───────────────────────────────────────────────────────────────────────────
+python train_research_grade.py ^
+    --config-file custom_configs/plateau_solutions/solution_1_higher_lr.yml ^
+    --run-name solution_1_higher_lr
+
+Then check result:
+  cat logs/market1501/solution_1_higher_lr/STOPPING_REASON.txt
+
+
+2️⃣ TEST ALL 5 SOLUTIONS (Batch run - Recommended)
+───────────────────────────────────────────────────────────────────────────
+run_plateau_solutions.bat
+
+Then check winner:
+  cat logs/plateau_solutions/BEST_MODEL_SELECTION.txt
+
+
+3️⃣ TEST SOLUTION 2 (Cosine Annealing) - If solution 1 worked well
+───────────────────────────────────────────────────────────────────────────
+python train_research_grade.py ^
+    --config-file custom_configs/plateau_solutions/solution_2_cosine_annealing.yml ^
+    --run-name solution_2_cosine_annealing
+
+
+═════════════════════════════════════════════════════════════════════════════
+
+YOUR SITUATION SUMMARIZED:
+═════════════════════════════════════════════════════════════════════════════
+
+Problem: CE Loss stuck at 6.71-6.73, no improvement (PLATEAU)
+Root Cause: Learning rate too low + loss imbalance
+Solutions: 5 optimized configs automatically generated
+Result: Clear STOPPING_REASON.txt for each run
+Goal: Find best model systematically (researcher style)
+
+═════════════════════════════════════════════════════════════════════════════
+
+THE 5 SOLUTIONS AT A GLANCE:
+═════════════════════════════════════════════════════════════════════════════
+
+✓ solution_1_higher_lr (TRY FIRST)
+  Fix: 2x learning rate (0.0007)
+  Expected: CE loss 6.7 → 5.5-6.0
+
+✓ solution_2_cosine_annealing (IF #1 WORKS)
+  Fix: Smooth cosine LR decay
+  Expected: Continuous improvement
+
+○ solution_3_heavy_triplet
+  Fix: CE 0.3, Triplet 2.0 (focus metric learning)
+  Expected: Better clustering
+
+○ solution_4_aggressive_lr_drop
+  Fix: Higher LR with drops at epochs 20, 50
+  Expected: Coarse-to-fine progression
+
+○ solution_5_smaller_batch_higher_lr
+  Fix: Batch 8, LR 0.001 (hard sample mining)
+  Expected: Stronger gradients
+
+═════════════════════════════════════════════════════════════════════════════
+
+EXPECTED IMPROVEMENTS:
+═════════════════════════════════════════════════════════════════════════════
+
+BEFORE (Current Plateau):
+  Epoch 10:  CE=6.71, Triplet=2.83, Total=9.54
+  Epoch 20:  CE=6.72, Triplet=2.81, Total=9.53 (NO CHANGE)
+  Status: WASTING COMPUTE ❌
+
+AFTER Solution 1 (Higher LR):
+  Epoch 10:  CE=6.45, Triplet=2.75, Total=9.20 (improved!)
+  Epoch 20:  CE=5.92, Triplet=2.68, Total=8.60 (continuing)
+  Status: WORKING ✓
+
+═════════════════════════════════════════════════════════════════════════════
+
+WORKFLOW:
+═════════════════════════════════════════════════════════════════════════════
+
+DAY 1 (Now): Start solution_1 (8 hours)
+  → Run command above
+  → Let it train in background
+
+DAY 2 (Tomorrow): Review results (5 minutes)
+  → Read STOPPING_REASON.txt
+  → Check if CE loss improved
+  → Decide: Deploy or try next solution
+
+DAY 3 (If needed): Try solution_2 (8 hours)
+  → Run if solution_1 worked but you want better
+  → Compare both results
+
+FINAL: Deploy
+  → Use best_model.pth from winning solution
+  → Load in enrollment_tracker.py
+  → Monitor real-world performance
+
+═════════════════════════════════════════════════════════════════════════════
+
+READING RESULTS:
+═════════════════════════════════════════════════════════════════════════════
+
+After each run, read:
+  logs/market1501/<run_name>/STOPPING_REASON.txt
+
+This file explains:
+  • Why training stopped
+  • Best mAP achieved
+  • Hyperparameters used
+  • What to do next
+
+It's human-readable and comprehensive!
+
+═════════════════════════════════════════════════════════════════════════════
+
+DEPLOYMENT (After training completes):
+═════════════════════════════════════════════════════════════════════════════
+
+Copy best model to deployment:
+  cp logs/market1501/solution_1_higher_lr/best_model.pth deployment/model.pth
+
+Use in code:
+  checkpoint = torch.load('deployment/model.pth')
+  model.load_state_dict(checkpoint['model'])
+
+═════════════════════════════════════════════════════════════════════════════
+
+KEY FILES YOU'LL CREATE:
+═════════════════════════════════════════════════════════════════════════════
+
+logs/market1501/solution_1_higher_lr/
+├── best_model.pth              ← THIS IS WHAT YOU NEED
+├── STOPPING_REASON.txt         ← READ THIS FIRST
+├── model_info.json             ← Metadata
+├── training_history.json       ← Metrics per epoch
+└── log.txt                     ← Full training log
+
+═════════════════════════════════════════════════════════════════════════════
+
+BOTTOM LINE:
+═════════════════════════════════════════════════════════════════════════════
+
+1. Run: python train_research_grade.py --config-file custom_configs/plateau_solutions/solution_1_higher_lr.yml --run-name solution_1_higher_lr
+
+2. Wait: ~8 hours
+
+3. Read: logs/market1501/solution_1_higher_lr/STOPPING_REASON.txt
+
+4. Check: Did CE loss improve? (6.7 → 5.5-6.0 is good)
+
+5. Deploy: Use best_model.pth
+
+═════════════════════════════════════════════════════════════════════════════
