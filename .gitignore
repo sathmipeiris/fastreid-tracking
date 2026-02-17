@@ -21,7 +21,6 @@ fastreid_env/
 
 # Git
 .git/
-fastreid/.git/
 
 # Data and Models - Heavy files
 datasets/
@@ -48,5 +47,3 @@ training_final.log
 Thumbs.db
 
 # Project specific
-fast-reid/
-fastreid/
