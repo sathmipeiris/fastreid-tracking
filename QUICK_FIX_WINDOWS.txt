@@ -1,0 +1,87 @@
+# Quick Fix Summary - Windows PyTorch Error
+
+## The Error You Got
+```
+RuntimeError: Couldn't open shared file mapping: <torch_19904_349185365_0>, error code: <1455>
+```
+
+## What Was Done (✅ Already Applied)
+
+1. **Modified FastReID data loader** (`fast-reid/fastreid/data/data_utils.py`)
+   - Disabled CUDA streams on Windows
+   - Disabled background thread data prefetching on Windows
+   - Added proper CUDA availability checks
+
+2. **Created training scripts** with proper environment configuration
+   - `train_windows_recommended.bat` ← **USE THIS ONE**
+   - `train_windows_patched.py` (alternative)
+   - `train_windows_fixed.py` (alternative)
+
+3. **Set all config files** with `DATALOADER.NUM_WORKERS: 0`
+   - Prevents any worker processes
+   - Already set in solution files
+
+## How to Run Training Now
+
+### Method 1: Simple Batch File (Recommended ⭐)
+```
+train_windows_recommended.bat
+```
+This will:
+- Set all environment variables automatically
+- Run FastReID with Windows-safe settings
+- No additional steps needed
+
+### Method 2: From Command Line
+```bash
+cd C:\Users\sathmi\Desktop\REID_TRAINING
+
+REM Set environment
+set TORCH_HOME=.torch_cache
+set KMP_DUPLICATE_LIB_OK=True
+set CUDA_LAUNCH_BLOCKING=1
+
+REM Run training (data_utils.py is already patched)
+python fast-reid/tools/train_net.py ^
+    --config-file custom_configs/plateau_solutions/solution_5_smaller_batch_higher_lr.yml ^
+    --num-gpus 1 ^
+    OUTPUT_DIR logs/market1501/plateau_solver ^
+    DATALOADER.NUM_WORKERS 0
+```
+
+## What to Expect
+
+✅ **Data loading should work** (no more shared file mapping error)
+⚠️ **Warnings about non-writable buffers** (normal, will suppress automatically)
+✅ **Training proceeds normally** after initial data loading
+⏱️ **Slightly slower data loading** (trade-off for stability on Windows)
+
+## Files Changed
+
+- `fast-reid/fastreid/data/data_utils.py` - **Core fix applied**
+- Created 3 helper scripts for reference
+- Created `WINDOWS_PYTORCH_FIX.md` for detailed info
+
+## If It Still Doesn't Work
+
+1. Check Python is running properly:
+   ```bash
+   python --version
+   python -c "import torch; print(torch.__version__)"
+   ```
+
+2. Delete the Python cache and try again:
+   ```bash
+   flatten %CD%\__pycache__ /S /Q
+   REM Then run training again
+   ```
+
+3. Verify the data_utils.py has our fixes:
+   ```bash
+   findstr "sys.platform" fast-reid\fastreid\data\data_utils.py
+   REM Should show: if torch.cuda.is_available() and sys.platform != 'win32':
+   ```
+
+---
+
+**Ready to train!** Just run: `train_windows_recommended.bat`

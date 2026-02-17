@@ -1,0 +1,17 @@
+{
+    "pythonVersion": "3.9",
+    "typeCheckingMode": "off",
+    "venvPath": ".",
+    "venv": "fastreid_env",
+    "extraPaths": [
+        "./fast-reid"
+    ],
+    "include": [
+        "."
+    ],
+    "exclude": [
+        "**/node_modules",
+        "**/__pycache__",
+        "fastreid_env"
+    ]
+}
