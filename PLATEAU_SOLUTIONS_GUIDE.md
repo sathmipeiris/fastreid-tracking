@@ -48,7 +48,7 @@ source reid_env/bin/activate
 
 python3 train_research_grade.py \
     --config-file custom_configs/plateau_solutions/solution_1_higher_lr.yml \
-    --run-name solution1_higher_lr
+    OUTPUT_DIR logs/market1501/solution1_higher_lr
 ```
 
 **What it does:**
@@ -94,7 +94,7 @@ logs/market1501/solution1_higher_lr/metrics_graphs/
 ```bash
 python3 train_research_grade.py \
     --config-file custom_configs/plateau_solutions/solution_2_cosine_annealing.yml \
-    --run-name solution2_cosine
+    OUTPUT_DIR logs/market1501/solution2_cosine
 ```
 
 **What it does:**
@@ -114,7 +114,7 @@ python3 evaluate_and_export_metrics.py \
 ```bash
 python3 train_research_grade.py \
     --config-file custom_configs/plateau_solutions/solution_3_heavy_triplet.yml \
-    --run-name solution3_heavy_triplet
+    OUTPUT_DIR logs/market1501/solution3_heavy_triplet
 ```
 
 **What it does:**
@@ -134,7 +134,7 @@ python3 evaluate_and_export_metrics.py \
 ```bash
 python3 train_research_grade.py \
     --config-file custom_configs/plateau_solutions/solution_4_aggressive_lr_drop.yml \
-    --run-name solution4_aggressive_drop
+    OUTPUT_DIR logs/market1501/solution4_aggressive_drop
 ```
 
 **What it does:**
@@ -155,7 +155,7 @@ python3 evaluate_and_export_metrics.py \
 ```bash
 python3 train_research_grade.py \
     --config-file custom_configs/plateau_solutions/solution_5_smaller_batch_higher_lr.yml \
-    --run-name solution5_smaller_batch
+    OUTPUT_DIR logs/market1501/solution5_smaller_batch
 ```
 
 **What it does:**
@@ -208,7 +208,7 @@ for config in "${!solutions[@]}"; do
     # Train
     python3 train_research_grade.py \
         --config-file custom_configs/plateau_solutions/${config}.yml \
-        --run-name ${run_name}
+        OUTPUT_DIR logs/market1501/${run_name}
     
     # Extract metrics
     echo "Extracting metrics..."
@@ -413,7 +413,7 @@ In your thesis results section:
 # Train one solution
 python3 train_research_grade.py \
     --config-file custom_configs/plateau_solutions/solution_1_higher_lr.yml \
-    --run-name solution1_higher_lr
+    OUTPUT_DIR logs/market1501/solution1_higher_lr
 
 # Extract metrics for one solution
 python3 evaluate_and_export_metrics.py \
@@ -427,8 +427,11 @@ python3 << 'EOF'
 import json
 from pathlib import Path
 for d in Path("logs/market1501").glob("solution*"):
-    h = json.load(open(d/"training_history.json"))
-    print(f"{d.name}: Rank-1={max(h.get('Rank-1', [0])):.2f}%")
+    try:
+        h = json.load(open(d/"training_history.json"))
+        print(f"{d.name}: Rank-1={max(h.get('Rank-1', [0])):.2f}%")
+    except:
+        pass
 EOF
 ```
 
