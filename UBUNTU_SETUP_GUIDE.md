@@ -53,7 +53,7 @@ cd fastreid-tracking
 # Install required packages
 pip install --upgrade pip
 
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 opencv-python faiss-cpu yacs scikit-learn tensorboard termcolor tqdm Pillow numpy scipy matplotlib tabulate pyyaml six setuptools wheel
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 opencv-python faiss-cpu yacs scikit-learn tensorboard termcolor tqdm Pillow numpy scipy matplotlib tabulate pyyaml six setuptools wheel gdown
 
 # Install fast-reid in development mode
 pip install -e fast-reid/
@@ -116,18 +116,18 @@ query/
 
 ## Step 7: Run Training
 
-### Quick Test (1 epoch - 5 minutes)
+### Quick Test (4 epochs - 5 minutes - Validation Only)
 
 ```bash
 # Activate virtual environment first
 source reid_env/bin/activate
 
-# Run with test config
+# Run with test config (does NOT save trained model, just validates setup)
 python3 train_research_grade.py \
     --config-file custom_configs/test_quick_sanity_check.yml
 ```
 
-### Full Training (90 epochs - 6-8 hours)
+### Full Training (90 epochs - 6-8 hours - Saves Trained Model)
 
 ```bash
 source reid_env/bin/activate
@@ -180,6 +180,60 @@ ls -la logs/market1501/production_run/
 
 ---
 
+## Step 10: Extract & Visualize Metrics (THESIS QUALITY)
+
+Generate high-quality graphs for your thesis evaluation:
+
+```bash
+# Activate virtual environment
+source reid_env/bin/activate
+
+# Generate all evaluation graphs (300 DPI - thesis quality)
+python3 evaluate_and_export_metrics.py \
+    --log-dir logs/market1501/production_run \
+    --output-dir logs/market1501/production_run/metrics_graphs
+```
+
+This generates 9 graphs:
+- ✅ Training Loss Curve
+- ✅ mAP vs Epoch (Mean Average Precision)
+- ✅ Rank-1 Accuracy vs Epoch  
+- ✅ Cosine Similarity Histogram (matched vs non-matched pairs)
+- ✅ ROC Curve (identification performance)
+- ✅ Confusion Matrix
+- ✅ FPS vs Time Graph (processing performance)
+- ✅ Temporal Smoothing Effect (raw vs smoothed scores)
+- ✅ ID Stability Graph (tracking robustness)
+
+All saved as PNG at 300 DPI (publication quality).
+
+```bash
+# View generated graphs
+ls -la logs/market1501/production_run/metrics_graphs/
+```
+
+---
+
+## Critical Metrics for Thesis Evaluation
+
+**ReID Performance:**
+- `mAP` - Mean Average Precision (how well it ranks similar people)
+- `Rank-1` - Top-1 accuracy (most critical metric)
+- `Rank-5` - Top-5 accuracy
+- Loss curve - Shows model learning over time
+
+**Identification Quality:**
+- Cosine similarity histogram - Shows decision boundary between same/different persons
+- ROC curve - Shows TPR vs FPR at different thresholds
+- Confusion matrix - TP, FP, TN, FN breakdown
+
+**System Performance:**
+- FPS graph - Real-time processing speed
+- Temporal smoothing - Denoising effectiveness
+- ID stability - Tracking consistency over time
+
+---
+
 ## Complete Workflow Script
 
 Copy this as a single script `run_training.sh`:
@@ -202,7 +256,7 @@ source reid_env/bin/activate
 # Step 2: Install dependencies
 echo -e "${GREEN}2. Installing dependencies...${NC}"
 pip install --upgrade pip
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 opencv-python faiss-cpu yacs scikit-learn tensorboard termcolor tqdm Pillow numpy scipy matplotlib tabulate pyyaml six setuptools wheel
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 opencv-python faiss-cpu yacs scikit-learn tensorboard termcolor tqdm Pillow numpy scipy matplotlib tabulate pyyaml six setuptools wheel gdown
 pip install -e fast-reid/
 
 # Step 3: Verify
@@ -281,7 +335,7 @@ git clone https://github.com/sathmipeiris/fastreid-tracking.git
 cd fastreid-tracking
 python3 -m venv reid_env
 source reid_env/bin/activate
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 opencv-python faiss-cpu yacs scikit-learn tensorboard termcolor tqdm Pillow numpy scipy matplotlib tabulate pyyaml six setuptools wheel && pip install -e fast-reid/
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 opencv-python faiss-cpu yacs scikit-learn tensorboard termcolor tqdm Pillow numpy scipy matplotlib tabulate pyyaml six setuptools wheel gdown && pip install -e fast-reid/
 python3 train_research_grade.py --config-file custom_configs/bagtricks_R50-ibn.yml
 ```
 
