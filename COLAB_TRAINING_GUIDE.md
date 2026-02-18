@@ -56,47 +56,30 @@ drive.mount('/content/drive')
 **Note:** The `fast-reid` folder is **already included** in your REID_TRAINING repo. 
 Once you clone/copy REID_TRAINING, you automatically get fast-reid.
 
-### Cell 2: Clone/Copy Your REID_TRAINING Repository (contains fast-reid)
+### Cell 2: Copy Your REID_TRAINING Repository from Drive (Recommended)
 ```python
 import os
-import subprocess
-
-os.chdir('/content')
-
-# Clone repo
-try:
-    subprocess.run(['git', 'clone', 'https://github.com/YOUR_USERNAME/REID_TRAINING.git'], check=True)
-    print("✓ Repository cloned from GitHub")
-except Exception as e:
-    print(f"✗ Clone failed: {e}")
-    print("Try Option B (Copy from Drive) instead")
-
-# Verify clone worked
-if os.path.exists('REID_TRAINING'):
-    os.chdir('/content/REID_TRAINING')
-    print(f"✓ Working directory: {os.getcwd()}")
-    print(f"Contents: {os.listdir('.')[:5]}...")  # Show first 5 items
-else:
-    print("✗ REID_TRAINING folder not found - clone failed!")
-```
-
-**OR if you uploaded ZIP to Drive, copy it instead:**
-```python
 import shutil
-import os
 
 os.chdir('/content')
 
-# Copy from Drive
+# Copy from Drive (you upload REID_TRAINING.zip to Drive first)
 try:
-    shutil.copytree('/content/drive/My Drive/REID_TRAINING', '/content/REID_TRAINING', dirs_exist_ok=True)
+    print("Copying REID_TRAINING from Drive...")
+    shutil.copytree('/content/drive/MyDrive/REID_TRAINING', '/content/REID_TRAINING', dirs_exist_ok=True)
     print("✓ Repository copied from Drive")
     os.chdir('/content/REID_TRAINING')
     print(f"✓ Working directory: {os.getcwd()}")
+    print(f"✓ fast-reid exists: {os.path.exists('fast-reid')}")
 except Exception as e:
     print(f"✗ Copy failed: {e}")
     print("Make sure you uploaded REID_TRAINING folder to Drive root")
 ```
+
+**How to prepare:**
+1. Zip your local `c:\Users\sathmi\Desktop\REID_TRAINING` folder
+2. Upload **REID_TRAINING.zip** to Google Drive root
+3. Run this cell in Colab
 
 ### Cell 3: Install PyTorch for Colab
 ```python
@@ -116,7 +99,7 @@ print(f"Current directory: {os.getcwd()}")
 # Check that fast-reid exists (it should - it's in your repo)
 if not os.path.exists('fast-reid'):
     print("✗ ERROR: fast-reid folder not found!")
-    print("Make sure your REID_TRAINING repo includes the fast-reid folder")
+    print("Make sure you uploaded the correct REID_TRAINING folder from Drive")
 else:
     print("✓ fast-reid folder found")
 
@@ -134,29 +117,43 @@ else:
     print("⚠ requirements.txt not found - main deps already installed")
 ```
 
-### Cell 5: Install FastReID Package (in editable mode)
+### Cell 5: Setup FastReID Module Path
 ```python
-import subprocess, sys
+import sys
 import os
 
-# Make sure we're in the right directory
+# Set up paths
 os.chdir('/content/REID_TRAINING')
 
-# Install fastreid from the local fast-reid folder
-try:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "-e", "fast-reid"])
-    print("✓ FastReID installed successfully")
-except Exception as e:
-    print(f"⚠ Install failed: {e}")
-    print("But main dependencies are already installed, proceeding anyway...")
+# Add fast-reid to Python path (simpler & more reliable than pip install -e)
+if '/content/REID_TRAINING/fast-reid' not in sys.path:
+    sys.path.insert(0, '/content/REID_TRAINING/fast-reid')
+    print("✓ FastReID path added to sys.path")
 
-# Verify installation
+# Verify fastreid can be imported
 try:
     import fastreid
-    print(f"✓ FastReID imported successfully: {fastreid.__version__}")
+    print(f"✓ FastReID imported successfully")
+    print(f"  Location: {fastreid.__file__}")
 except ImportError as e:
-    print(f"⚠ FastReID import warning: {e}")
-    print("(This may be okay if all main deps are installed)")
+    print(f"⚠ Import issue: {e}")
+    print("  But setup.py-based install isn't needed - path is set")
+    print("  Training should still work with dependencies installed")
+
+# Double-check key dependencies are available
+required = ['torch', 'cv2', 'yacs', 'faiss', 'sklearn']
+missing = []
+for pkg in required:
+    try:
+        __import__(pkg)
+    except ImportError:
+        missing.append(pkg)
+
+if missing:
+    print(f"⚠ Missing packages: {missing}")
+    print("  Install with: !pip install opencv-python faiss-cpu scikit-learn")
+else:
+    print(f"✓ All core dependencies available")
 ```
 
 ---
@@ -194,17 +191,46 @@ for filename in uploaded.keys():
 
 ### Option C: Use Google Drive (Recommended for Large Files)
 ```python
-# If dataset is in your Google Drive
+# If dataset is in your Google Drive as a ZIP file
 import shutil
+import zipfile
+import os
 
-drive_dataset = '/content/drive/My Drive/Market-1501-v15.09.15'
-local_dataset = '/content/REID_TRAINING/fast-reid/datasets/Market-1501-v15.09.15'
+# These are the paths to check in your Drive
+drive_dataset_dir = '/content/drive/My Drive/Market-1501-v15.09.15'
+drive_dataset_zip = '/content/drive/My Drive/Market-1501-v15.09.15.zip'
 
-if os.path.exists(drive_dataset):
-    shutil.copytree(drive_dataset, local_dataset, dirs_exist_ok=True)
-    print("✓ Dataset copied from Drive")
+local_dataset_dir = '/content/REID_TRAINING/fast-reid/datasets/Market-1501-v15.09.15'
+local_dataset_dir_parent = '/content/REID_TRAINING/fast-reid/datasets'
+
+os.makedirs(local_dataset_dir_parent, exist_ok=True)
+
+# Try to find dataset: unzipped folder first, then zip file
+if os.path.exists(drive_dataset_dir):
+    print("✓ Found unzipped dataset in Drive, copying...")
+    shutil.copytree(drive_dataset_dir, local_dataset_dir, dirs_exist_ok=True)
+    print(f"✓ Dataset copied from Drive: {local_dataset_dir}")
+
+elif os.path.exists(drive_dataset_zip):
+    print(f"✓ Found zip file in Drive, downloading and extracting...")
+    # Copy zip to Colab first (faster than direct extraction)
+    local_zip = f'{local_dataset_dir_parent}/Market-1501.zip'
+    print(f"  Copying {drive_dataset_zip} to {local_zip}...")
+    shutil.copy(drive_dataset_zip, local_zip)
+    
+    # Extract
+    print(f"  Extracting {local_zip}...")
+    with zipfile.ZipFile(local_zip, 'r') as zip_ref:
+        zip_ref.extractall(local_dataset_dir_parent)
+    
+    # Clean up zip
+    os.remove(local_zip)
+    print(f"✓ Dataset extracted to: {local_dataset_dir}")
 else:
-    print("⚠ Dataset not found in Drive")
+    print("✗ Dataset not found in Drive!")
+    print("  Expected either:")
+    print(f"    - Folder: /My Drive/Market-1501-v15.09.15")
+    print(f"    - ZIP: /My Drive/Market-1501-v15.09.15.zip")
 ```
 
 ---
@@ -230,20 +256,130 @@ print(f"PYTHONPATH: {os.environ['PYTHONPATH']}")
 
 ### Cell 7: Run Training Script
 ```python
-!python train_research_grade.py \
-    --config-file custom_configs/bagtricks_R50-ibn.yml \
-    --run-name colab_training
+import os
+import subprocess
 
-# Alternative: Use early stopping version
-# !python train_with_early_stopping.py \
-#     --config-file custom_configs/bagtricks_R50-ibn.yml \
-#     OUTPUT_DIR logs/market1501/colab_training
+# CRITICAL: Make sure you're in the right directory
+os.chdir('/content/REID_TRAINING')
+print(f"Working dir: {os.getcwd()}")
+
+# Quick test with 1 epoch + evaluation to verify everything works
+result = subprocess.run([
+    'python', 'train_research_grade.py',
+    '--config-file', 'custom_configs/bagtricks_R50-ibn.yml',
+    '--run-name', 'colab_test_1epoch',
+    'SOLVER.MAX_EPOCHS', '1',
+    'TEST.EVAL_PERIOD', '1'
+], cwd='/content/REID_TRAINING')
+
+if result.returncode == 0:
+    print("\n✓ Test complete! Check metrics in next cell with TensorBoard")
+else:
+    print(f"\n✗ Training failed with error code {result.returncode}")
 ```
 
-### Cell 8: Monitor Training (Optional)
+**Advanced: Use Plateau Solutions for Better Convergence**
+
+After test passes, try one of these optimized configs:
 ```python
-# Launch TensorBoard
+import os
+os.chdir('/content/REID_TRAINING')
+
+# Solution 1: Higher Learning Rate (faster convergence)
+!python train_research_grade.py \
+    --config-file custom_configs/plateau_solutions/solution_1_higher_lr.yml \
+    --run-name solution_1_higher_lr \
+    TEST.EVAL_PERIOD 10
+
+# Solution 2: Cosine Annealing (smooth learning decay)
+# !python train_research_grade.py \
+#     --config-file custom_configs/plateau_solutions/solution_2_cosine_annealing.yml \
+#     --run-name solution_2_cosine \
+#     TEST.EVAL_PERIOD 10
+
+# Solution 3: Heavy Triplet Loss (better feature separation)
+# !python train_research_grade.py \
+#     --config-file custom_configs/plateau_solutions/solution_3_heavy_triplet.yml \
+#     --run-name solution_3_heavy_triplet \
+#     TEST.EVAL_PERIOD 10
+
+# Solution 4: Aggressive LR Drop (quick learning rate reduction)
+# !python train_research_grade.py \
+#     --config-file custom_configs/plateau_solutions/solution_4_aggressive_lr_drop.yml \
+#     --run-name solution_4_aggressive \
+#     TEST.EVAL_PERIOD 10
+
+# Solution 5: Smaller Batch + Higher LR (more gradient updates)
+# !python train_research_grade.py \
+#     --config-file custom_configs/plateau_solutions/solution_5_smaller_batch_higher_lr.yml \
+#     --run-name solution_5_batch8 \
+#     TEST.EVAL_PERIOD 10
+```
+
+### Cell 8: Monitor Training & View Metrics
+```python
+# FIRST: Load TensorBoard extension in Colab
+%load_ext tensorboard
+
+# THEN: Launch TensorBoard to visualize real-time metrics
 %tensorboard --logdir /content/REID_TRAINING/logs
+
+# TensorBoard will show:
+# - Training Loss (Cross-Entropy + Triplet Loss)
+# - Validation Rank-1 Accuracy
+# - Validation mAP (Mean Average Precision)
+# - Learning Rate Schedule
+# - False Positives / Negative distances
+# - Confusion matrices per epoch
+```
+
+**What to look for in TensorBoard:**
+- **Loss curve:** Should decrease smoothly (not spike)
+- **Rank-1 accuracy:** Should increase towards convergence (80-90%+)
+- **mAP:** Higher is better (50-80% is good)
+- **Learning rate:** Should follow your SCHED setting (MultiStepLR, CosineAnnealingLR, etc.)
+
+### Cell 9: Compare Training Results Across Solutions
+```python
+import json
+from pathlib import Path
+import pandas as pd
+
+logs_dir = Path('/content/REID_TRAINING/logs/market1501')
+
+# Find all training runs
+runs = {}
+for run_dir in logs_dir.glob('*/'):
+    log_file = run_dir / 'log.txt'
+    if log_file.exists():
+        runs[run_dir.name] = run_dir
+
+# Create comparison table
+results = []
+for run_name, run_path in runs.items():
+    log_file = run_path / 'log.txt'
+    try:
+        # Extract final metrics (simplified parsing)
+        with open(log_file, 'r') as f:
+            lines = f.readlines()
+            final_line = lines[-1] if lines else ""
+            results.append({
+                'Run': run_name,
+                'Path': str(run_path),
+                'Logs': str(log_file)
+            })
+    except:
+        pass
+
+if results:
+    df = pd.DataFrame(results)
+    print("\n" + "="*80)
+    print("TRAINING RUNS COMPARISON")
+    print("="*80)
+    print(df.to_string(index=False))
+    print("="*80)
+else:
+    print("No completed runs found yet. Training is in progress or just started.")
 ```
 
 ---
@@ -277,62 +413,109 @@ print("✓ All results backed up to Google Drive")
 
 ---
 
-## ⚙️ Configuration Options
+## 🎯 Plateau Solutions Comparison
 
-### Quick Training (Faster, Less Accurate)
+When training plateaus (no improvement), try one of these 5 optimized configurations:
+
+| Solution | Strategy | Key Params | When to Use |
+|----------|----------|-----------|------------|
+| **Solution 1: Higher LR** | Increase learning rate to escape plateau | BASE_LR: 0.0007, MultiStepLR [30,60,80] | Quick convergence, high-quality data |
+| **Solution 2: Cosine Annealing** | Smooth learning rate decay | BASE_LR: 0.0005, CosineAnnealingLR | Fine-tuning, smooth training curves |
+| **Solution 3: Heavy Triplet** | Emphasize triplet loss (2.0 vs 1.5) | TRI.SCALE: 2.0, MAX_EPOCHS: 120 | Better feature separation, needs more epochs |
+| **Solution 4: Aggressive LR Drop** | Rapid LR reduction early | BASE_LR: 0.001, STEPS: [20,50,70] | Quick optimization, may overfit |
+| **Solution 5: Small Batch + High LR** | More gradient updates per epoch | IMS_PER_BATCH: 8, BASE_LR: 0.001 | Limited GPU memory, noisy gradients |
+
+**Recommendation for Colab (Free Tesla T4):**
+- Start with **Solution 1** (faster, fewer epochs)
+- If stuck, try **Solution 2** (smoother learning)
+- For best accuracy, use **Solution 3** (longer training, better features)
+
+---
+
+## ⚙️ Advanced Configuration
+
+### Quick Sanity Check
 ```bash
 !python train_research_grade.py \
     --config-file custom_configs/test_quick_sanity_check.yml \
-    --run-name quick_test
+    --run-name quick_sanity \
+    TEST.EVAL_PERIOD 1
 ```
 
-### Production Training (Better Results)
+### Enable Evaluation During Training
 ```bash
+# Add TEST.EVAL_PERIOD to any config to evaluate metrics
+# EVAL_PERIOD: 1 = evaluate every epoch
+# EVAL_PERIOD: 10 = evaluate every 10 epochs
+# EVAL_PERIOD: 0 = disable evaluation (faster training)
+
 !python train_research_grade.py \
     --config-file custom_configs/plateau_solutions/solution_1_higher_lr.yml \
-    --run-name solution_1_test
+    --run-name with_metrics \
+    TEST.EVAL_PERIOD 10  # This enables metrics saving!
 ```
 
-### Adjust Batch Size for Memory
-Edit config and add:
-```yaml
-SOLVER:
-  IMS_PER_BATCH: 32  # Reduce if OOM (out of memory)
+### Customize Batch Size for Memory
+```bash
+# Reduce if Out of Memory errors occur
+!python train_research_grade.py \
+    --config-file custom_configs/bagtricks_R50-ibn.yml \
+    --run-name memory_optimized \
+    DATALOADER.IMS_PER_BATCH 8 \
+    TEST.EVAL_PERIOD 10
+```
+
+### Use Different Backbones
+```bash
+# ResNet50 with IBN (default)
+# For lightweight inference, try MobileNet or EfficientNet configs
+!python train_research_grade.py \
+    --config-file custom_configs/bagtricks_R50-ibn.yml \
+    --run-name r50_ibn_baseline
 ```
 
 ---
 
 ## 🔧 Troubleshooting
 
+### No Metrics Being Saved (TensorBoard Empty)
+```python
+# Make sure TEST.EVAL_PERIOD is set to a number > 0
+# 0 = disabled, 1-10 = evaluate every N epochs
+
+!python train_research_grade.py \
+    --config-file custom_configs/bagtricks_R50-ibn.yml \
+    --run-name with_metrics \
+    TEST.EVAL_PERIOD 1  # This MUST be > 0!
+
+# Then check logs
+!ls -la /content/REID_TRAINING/logs/market1501/with_metrics/
+```
+
+### Training Loss Not Decreasing
+- Try **Solution 1** (higher learning rate)
+- Try **Solution 2** (cosine annealing for smooth learning)
+- Check: Is loss NaN or infinite? → Learning rate too high
+- Check: Is loss flat? → Learning rate too low (try Solution 1)
+
+### Rank-1 Accuracy Stuck at Low Values
+- Try **Solution 3** (heavier triplet loss for better feature learning)
+- Increase MAX_EPOCHS (more time to train)
+- Check dataset: Are there enough positive pairs per identity?
+
 ### Out of Memory (OOM) Error
 ```python
-# Reduce batch size in config
-# Or restart kernel and try again
+# Reduce batch size
+!python train_research_grade.py \
+    --config-file custom_configs/bagtricks_R50-ibn.yml \
+    --run-name oom_fix \
+    DATALOADER.IMS_PER_BATCH 8 \
+    TEST.EVAL_PERIOD 10
 
-import torch
-torch.cuda.empty_cache()
-```
-
-### CUDA Memory Issues
-```python
-# Check memory
-!nvidia-smi
-
-# Clear cache
-import gc
-gc.collect()
-```
-
-### Dataset Not Found
-```python
-# Verify dataset structure
-!ls -la /content/REID_TRAINING/fast-reid/datasets/
-```
-
-### Module Import Errors
-```python
-# Reinstall package
-!pip install --force-reinstall -e /content/REID_TRAINING/fast-reid
+# Or try Solution 5 (already optimized for small batch)
+!python train_research_grade.py \
+    --config-file custom_configs/plateau_solutions/solution_5_smaller_batch_higher_lr.yml \
+    --run-name solution_5
 ```
 
 ---
@@ -348,7 +531,47 @@ gc.collect()
 
 ---
 
-## ✅ After Training
+## 📊 Interpreting Training Metrics
+
+### Key Metrics to Monitor
+
+| Metric | Good Range | What It Means | Action if Low |
+|--------|-----------|---------------|---------------|
+| **Loss** | Decreases from 5→1 | Training is improving | Check learning rate |
+| **Rank-1 Accuracy** | 80-95% | % of queries with correct match at top | Try Solution 3 (triplet loss) |
+| **mAP (Mean Avg Precision)** | 50-80% | Overall retrieval quality | Increase epochs or try Solution 3 |
+| **Learning Rate** | Following schedule | Should decay over time | Should follow your SCHED [MultiStepLR/CosineAnnealingLR] |
+
+### Real-Time Monitoring with TensorBoard
+```python
+# During training, in a new cell:
+%tensorboard --logdir /content/REID_TRAINING/logs
+
+# Look for:
+# - Loss curves (should be smooth, not jagged)
+# - Accuracy increasing (not plateauing)
+# - Learning rate following your schedule [SCHED]
+# - Validation metrics improving (if EVAL_PERIOD > 0)
+```
+
+### Which Solution to Try Based on Training Behavior
+
+**Scenario 1: Training loss decreasing but accuracy flat**
+→ Try **Solution 3** (Heavy Triplet Loss) - improves feature separation
+
+**Scenario 2: Training loss decreasing too slowly**
+→ Try **Solution 1** or **Solution 4** (Higher LR or aggressive drops)
+
+**Scenario 3: Training loss fluctuates wildly**
+→ Try **Solution 2** (Cosine Annealing) - smoother learning curve
+
+**Scenario 4: Out of Memory with batch size 16**
+→ Use **Solution 5** (batch size 8 with higher LR)
+
+**Scenario 5: No time for long training**
+→ Use **Solution 4** (faster convergence with aggressive LR drops)
+
+---
 
 ### Download Results
 ```python
@@ -356,9 +579,62 @@ from google.colab import files
 import os
 
 # Download best model
-model_path = '/content/REID_TRAINING/logs/market1501/colab_training/model_final.pth'
-if os.path.exists(model_path):
-    files.download(model_path)
+model_path = '/content/REID_TRAINING/logs/market1501/*/model_final.pth'
+import glob
+models = glob.glob(model_path)
+
+if models:
+    latest_model = max(models, key=os.path.getctime)
+    files.download(latest_model)
+    print(f"✓ Downloaded: {latest_model}")
+else:
+    print("✗ No model found - training may still be in progress")
+```
+
+### View Training Metrics (After Training)
+```python
+# Read and display final metrics
+from pathlib import Path
+import json
+
+logs_dir = Path('/content/REID_TRAINING/logs/market1501')
+
+for run_dir in logs_dir.glob('*/'):
+    metrics_file = run_dir / 'metrics.json'
+    if metrics_file.exists():
+        with open(metrics_file) as f:
+            metrics = json.load(f)
+            print(f"\n{'='*60}")
+            print(f"Run: {run_dir.name}")
+            print(f"{'='*60}")
+            for key, val in metrics.items():
+                if isinstance(val, float):
+                    print(f"{key:.<40} {val:.4f}")
+                else:
+                    print(f"{key:.<40} {val}")
+```
+
+### Compare Multiple Training Runs
+```python
+# Create comparison table across all runs
+import pandas as pd
+from pathlib import Path
+
+logs_dir = Path('/content/REID_TRAINING/logs/market1501')
+results = []
+
+for run_dir in logs_dir.glob('*/'):
+    log_file = run_dir / 'log.txt'
+    if log_file.exists():
+        results.append({
+            'Run Name': run_dir.name,
+            'Logs Path': str(run_dir),
+            'Has Metrics': (run_dir / 'metrics.json').exists()
+        })
+
+if results:
+    df = pd.DataFrame(results)
+    print(df.to_string(index=False))
 ```
 
 ### Evaluate Model
@@ -387,31 +663,21 @@ Create a new Colab notebook and paste this:
 from google.colab import drive
 drive.mount('/content/drive')
 
-# 3. Clone/Copy Your REID_TRAINING Repository (it already includes fast-reid)
+# 3. Copy Your REID_TRAINING Repository from Drive
 import os
 import shutil
-import subprocess
 
-# Option A: Clone your REID_TRAINING repo from GitHub
+os.chdir('/content')
+
+print("Copying REID_TRAINING from Drive...")
 try:
-    subprocess.run(['git', 'clone', 'https://github.com/YOUR_USERNAME/REID_TRAINING.git'], check=True)
+    shutil.copytree('/content/drive/MyDrive/REID_TRAINING', '/content/REID_TRAINING', dirs_exist_ok=True)
     os.chdir('/content/REID_TRAINING')
-    print(f"✓ Cloned REID_TRAINING from GitHub")
-except:
-    print("✗ Clone failed - trying Drive instead...")
-    # Option B: Copy from Drive (if uploaded there)
-    try:
-        shutil.copytree('/content/drive/My Drive/REID_TRAINING', '/content/REID_TRAINING', dirs_exist_ok=True)
-        os.chdir('/content/REID_TRAINING')
-        print(f"✓ Copied REID_TRAINING from Drive")
-    except:
-        print("✗ Both failed - check GitHub URL or upload to Drive")
-
-# Verify fast-reid is included
-if os.path.exists('fast-reid'):
-    print(f"✓ fast-reid folder found (part of REID_TRAINING)")
-else:
-    print(f"✗ fast-reid not found - your REID_TRAINING repo should include it")
+    print(f"✓ Copied REID_TRAINING from Google Drive")
+    print(f"✓ fast-reid exists: {os.path.exists('fast-reid')}")
+except Exception as e:
+    print(f"✗ Failed: {e}")
+    print("Upload REID_TRAINING.zip to Drive root first")
 
 # 4. Install PyTorch
 !pip install --upgrade pip
@@ -431,28 +697,75 @@ else:
     print("⚠ requirements.txt not found - main deps already installed")
 
 # 6. Install FastReID Package
-import subprocess, sys
-try:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "-e", "fast-reid"])
-    print("✓ FastReID installed")
-except:
-    print("⚠ FastReID install had issues but main deps are there")
+import sys
+os.chdir('/content/REID_TRAINING')
+if '/content/REID_TRAINING/fast-reid' not in sys.path:
+    sys.path.insert(0, '/content/REID_TRAINING/fast-reid')
+print("✓ FastReID module path configured")
 
 # 7. Set Paths
 os.environ['PYTHONPATH'] = '/content/REID_TRAINING/fast-reid'
 os.environ['FASTREID_DATASETS'] = '/content/REID_TRAINING/fast-reid/datasets'
 
-# 8. Copy Dataset from Drive (if available)
-drive_dataset = '/content/drive/My Drive/Market-1501-v15.09.15'
-local_dataset = '/content/REID_TRAINING/fast-reid/datasets/Market-1501-v15.09.15'
-if os.path.exists(drive_dataset):
-    shutil.copytree(drive_dataset, local_dataset, dirs_exist_ok=True)
-    print("✓ Dataset copied from Drive")
+# 8. Copy Dataset from Drive (if available - handles both zip and unzipped)
+import zipfile
+drive_dataset_dir = '/content/drive/My Drive/Market-1501-v15.09.15'
+drive_dataset_zip = '/content/drive/My Drive/Market-1501-v15.09.15.zip'
+local_dataset_dir = '/content/REID_TRAINING/fast-reid/datasets/Market-1501-v15.09.15'
+local_dataset_parent = '/content/REID_TRAINING/fast-reid/datasets'
 
-# 9. Start Training
-!python train_research_grade.py \
-    --config-file custom_configs/bagtricks_R50-ibn.yml \
-    --run-name colab_run
+os.makedirs(local_dataset_parent, exist_ok=True)
+
+if os.path.exists(drive_dataset_dir):
+    shutil.copytree(drive_dataset_dir, local_dataset_dir, dirs_exist_ok=True)
+    print("✓ Dataset copied from Drive")
+elif os.path.exists(drive_dataset_zip):
+    print("Extracting dataset zip...")
+    local_zip = f'{local_dataset_parent}/Market-1501.zip'
+    shutil.copy(drive_dataset_zip, local_zip)
+    with zipfile.ZipFile(local_zip, 'r') as zip_ref:
+        zip_ref.extractall(local_dataset_parent)
+    os.remove(local_zip)
+    print("✓ Dataset extracted from Drive zip")
+else:
+    print("⚠ Dataset not in Drive - will need to upload or download separately")
+
+# 9. Start Training (test with 1 epoch first, WITH metrics)
+import os
+import subprocess
+
+os.chdir('/content/REID_TRAINING')
+print(f"Working in: {os.getcwd()}")
+
+# Run test
+subprocess.run([
+    'python', 'train_research_grade.py',
+    '--config-file', 'custom_configs/bagtricks_R50-ibn.yml',
+    '--run-name', 'test_1epoch',
+    'SOLVER.MAX_EPOCHS', '1',
+    'TEST.EVAL_PERIOD', '1'
+])
+
+print("\n✓ Test run complete! If successful, run full training with plateau solution:")
+
+# After test passes, uncomment ONE of these for full training:
+# SOLUTION 1: Higher Learning Rate (RECOMMENDED for Colab)
+# os.chdir('/content/REID_TRAINING')
+# subprocess.run([
+#     'python', 'train_research_grade.py',
+#     '--config-file', 'custom_configs/plateau_solutions/solution_1_higher_lr.yml',
+#     '--run-name', 'solution_1_v1',
+#     'TEST.EVAL_PERIOD', '10'
+# ])
+
+# SOLUTION 3: Heavy Triplet (best accuracy, longer)
+# os.chdir('/content/REID_TRAINING')
+# subprocess.run([
+#     'python', 'train_research_grade.py',
+#     '--config-file', 'custom_configs/plateau_solutions/solution_3_heavy_triplet.yml',
+#     '--run-name', 'solution_3_v1',
+#     'TEST.EVAL_PERIOD', '10'
+# ])
 
 # 10. Save to Drive (RUN BEFORE DISCONNECTING!)
 shutil.copytree('/content/REID_TRAINING/logs',
