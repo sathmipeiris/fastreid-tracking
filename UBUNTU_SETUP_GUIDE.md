@@ -134,7 +134,7 @@ source reid_env/bin/activate
 
 python3 train_research_grade.py \
     --config-file custom_configs/bagtricks_R50-ibn.yml \
-    --run-name production_run
+    OUTPUT_DIR logs/market1501/production_run
 ```
 
 ### With Custom Parameters
@@ -144,7 +144,7 @@ source reid_env/bin/activate
 
 python3 train_research_grade.py \
     --config-file custom_configs/bagtricks_R50-ibn.yml \
-    --run-name my_experiment \
+    OUTPUT_DIR logs/market1501/my_experiment \
     SOLVER.MAX_EPOCHS 120 \
     SOLVER.BASE_LR 0.0005 \
     TEST.EVAL_PERIOD 10
@@ -276,7 +276,7 @@ fi
 echo -e "${GREEN}5. Starting training...${NC}"
 python3 train_research_grade.py \
     --config-file custom_configs/bagtricks_R50-ibn.yml \
-    --run-name ubuntu_run
+    OUTPUT_DIR logs/market1501/ubuntu_run
 
 echo -e "${GREEN}✓ Training complete!${NC}"
 echo "Results in: logs/market1501/ubuntu_run/"
@@ -330,13 +330,18 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 ## Summary
 
 ```bash
-# TL;DR - 4 commands:
+# TL;DR - Complete setup and training:
 git clone https://github.com/sathmipeiris/fastreid-tracking.git
 cd fastreid-tracking
 python3 -m venv reid_env
 source reid_env/bin/activate
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 opencv-python faiss-cpu yacs scikit-learn tensorboard termcolor tqdm Pillow numpy scipy matplotlib tabulate pyyaml six setuptools wheel gdown && pip install -e fast-reid/
-python3 train_research_grade.py --config-file custom_configs/bagtricks_R50-ibn.yml
+python3 train_research_grade.py --config-file custom_configs/bagtricks_R50-ibn.yml OUTPUT_DIR logs/market1501/production_run
+```
+
+Then extract metrics:
+```bash
+python3 evaluate_and_export_metrics.py --log-dir logs/market1501/production_run
 ```
 
 That's it! Training starts automatically.
