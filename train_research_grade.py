@@ -244,14 +244,18 @@ class ResearchTrainer(DefaultTrainer):
             # Otherwise results are stale from previous evaluation, don't use them
         
         # Method 2: Check storage (fallback)
+        # Only use storage metrics if THIS epoch was scheduled for evaluation
         if not has_eval and hasattr(self, 'storage'):
-            storage = self.storage
-            latest_metrics = storage.latest()
-            if latest_metrics and 'mAP' in latest_metrics:
-                current_mAP = extract_metric_value(latest_metrics.get('mAP', 0.0))
-                current_top1 = extract_metric_value(latest_metrics.get('top-1', 0.0))
-                if current_mAP > 0.0:
-                    has_eval = True
+            next_epoch = epoch_num
+            # Only look at storage if this epoch should have evaluation
+            if self.cfg.TEST.EVAL_PERIOD > 0 and next_epoch % self.cfg.TEST.EVAL_PERIOD == 0:
+                storage = self.storage
+                latest_metrics = storage.latest()
+                if latest_metrics and 'mAP' in latest_metrics:
+                    current_mAP = extract_metric_value(latest_metrics.get('mAP', 0.0))
+                    current_top1 = extract_metric_value(latest_metrics.get('top-1', 0.0))
+                    if current_mAP > 0.0:
+                        has_eval = True
         
         # If we got evaluation results, log and track them
         if has_eval:
