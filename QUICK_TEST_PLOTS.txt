@@ -1,0 +1,102 @@
+# Quick Test: Automatic Metric Plot Generation
+
+## One-Line Command to Test
+
+```bash
+python train_research_grade.py --config-file custom_configs/base_with_eval.yml --num-gpus 1
+```
+
+This will:
+1. Train for 4 epochs
+2. Evaluate at epochs 2 and 4
+3. **Auto-generate plots at each evaluation**
+4. **Generate final comprehensive plots at end**
+
+Expected output:
+```
+[Epoch 1/4] Training in progress...
+[Epoch 2/4] 
+  Metrics: mAP: 1.4316, top-1: 0.xxxx
+  📊 Plots saved to: logs/market1501/plateau_solver/base_with_eval/metric_plots/
+[Epoch 3/4] Training in progress...
+[Epoch 4/4]
+  Metrics: mAP: 1.5066, top-1: 0.xxxx
+  📊 Plots saved to: logs/market1501/plateau_solver/base_with_eval/metric_plots/
+✓ Metric plots saved to: logs/market1501/plateau_solver/base_with_eval/metric_plots/
+```
+
+## View Generated Plots
+
+After training completes, open the metric_plots folder:
+
+**On Windows Explorer:**
+```
+C:\Users\sathmi\Desktop\REID_TRAINING\logs\market1501\plateau_solver\base_with_eval\metric_plots\
+```
+
+**Files created:**
+- `01_training_curves.png` - mAP, Rank-1, Loss trends
+- `02_cosine_similarity_histogram.png` - Feature discriminability
+- `03_roc_curve.png` - Performance metrics
+- `04_confusion_matrix.png` - ID confusion analysis
+- `05_raw_vs_smoothed_similarity.png` - Temporal stability
+- `06_all_metrics_summary.png` - One-page dashboard
+
+## Full Training (90 Epochs)
+
+```bash
+python train_research_grade.py --config-file custom_configs/plateau_solutions/solution_1_higher_lr.yml --num-gpus 1
+```
+
+This will:
+- **45 evaluation events** (every 2 epochs)
+- **45×6 plots** = 270 PNG files
+- Real-time monitoring of training progression
+- Complete training trajectory for thesis
+
+## If Plots Don't Generate
+
+Check these files exist:
+```bash
+# List metric plots directory
+dir "logs\market1501\plateau_solver\base_with_eval\metric_plots\"
+
+# Check training history
+type "logs\market1501\plateau_solver\base_with_eval\training_history.json"
+```
+
+If empty or missing:
+1. Ensure training ran for at least eval periods: `TEST.EVAL_PERIOD: 2`
+2. Check `training_history.json` has non-zero mAP values
+3. Verify `metric_plots/` folder was created
+
+## Customization
+
+To disable auto-plots and only generate manually:
+
+Edit `train_research_grade.py`:
+```python
+# Comment out these lines:
+# if PLOTTER_AVAILABLE:
+#     generate_all_plots(...)
+```
+
+To manually generate plots anytime:
+```python
+from train_metric_plotter import generate_all_plots
+generate_all_plots(
+    'logs/market1501/plateau_solver/base_with_eval/',
+    'logs/market1501/plateau_solver/base_with_eval/training_history.json'
+)
+```
+
+## Integration Status
+
+✅ Metric plotter integrated into training pipeline
+✅ Auto-generation after each evaluation epoch  
+✅ Final plot generation at end of training
+✅ Graceful error handling (warnings only)
+✅ 300 DPI thesis-quality output
+✅ 6 different visualization types
+
+**Status**: READY TO USE - just run training command above!

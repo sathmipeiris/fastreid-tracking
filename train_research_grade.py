@@ -32,6 +32,14 @@ from fastreid.utils import comm
 
 print("Framework loaded successfully", flush=True)
 
+# Import metric plotter
+try:
+    from train_metric_plotter import ReIDMetricPlotter, generate_all_plots
+    PLOTTER_AVAILABLE = True
+except ImportError:
+    PLOTTER_AVAILABLE = False
+    print("Warning: train_metric_plotter not available - no auto plots will be generated")
+
 # Color codes for terminal output
 class Colors:
     HEADER = '\033[95m'
@@ -270,6 +278,16 @@ class ResearchTrainer(DefaultTrainer):
             self.training_history['mAP'].append(current_mAP)
             self.training_history['top1'].append(current_top1)
             
+            # Generate metric plots after evaluation (only once per evaluation epoch)
+            if PLOTTER_AVAILABLE:
+                try:
+                    history_file = Path(self.cfg.OUTPUT_DIR) / 'training_history.json'
+                    if history_file.exists():
+                        plot_output_dir = generate_all_plots(str(self.cfg.OUTPUT_DIR), str(history_file))
+                        logger.info(f"  {Colors.BOLD}{Colors.CYAN}📊 Plots saved to: {plot_output_dir}{Colors.ENDC}")
+                except Exception as e:
+                    logger.debug(f"Plot generation skipped: {str(e)}")
+            
             # Early stopping logic
             if current_mAP > self.best_mAP:
                 self.best_mAP = current_mAP
@@ -490,7 +508,29 @@ def main(args):
     )
     
     trainer.resume_or_load(resume=args.resume)
-    return trainer.train()
+    results = trainer.train()
+    
+    # Generate metric plots after training completes
+    if PLOTTER_AVAILABLE and comm.is_main_process():
+        try:
+            logger = logging.getLogger(__name__)
+            run_dir = trainer.cfg.OUTPUT_DIR if hasattr(trainer, 'cfg') else None
+            
+            if run_dir:
+                history_file = Path(run_dir) / 'training_history.json'
+                if history_file.exists():
+                    logger.info(f"\n{Colors.BOLD}{Colors.CYAN}Generating metric plots...{Colors.ENDC}")
+                    plot_output_dir = generate_all_plots(str(run_dir), str(history_file))
+                    logger.info(f"{Colors.BOLD}{Colors.GREEN}✓ Metric plots saved to: {plot_output_dir}{Colors.ENDC}\n")
+                else:
+                    logger.warning(f"Training history file not found: {history_file}")
+            else:
+                logger.warning("Cannot generate plots: OUTPUT_DIR not configured")
+        except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to generate metric plots: {str(e)}")
+    
+    return results
 
 
 if __name__ == "__main__":
