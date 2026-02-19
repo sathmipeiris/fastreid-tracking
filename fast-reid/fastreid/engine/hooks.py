@@ -365,6 +365,9 @@ class EvalHook(HookBase):
                         "Got '{}: {}' instead.".format(k, v)
                     )
             self.trainer.storage.put_scalars(**flattened_results, smoothing_hint=False)
+            
+            # Store results for ResearchTrainer to access
+            self.trainer._last_eval_results = flattened_results
 
         torch.cuda.empty_cache()
         # Evaluation may take different time among workers.
