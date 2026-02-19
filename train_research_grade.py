@@ -229,11 +229,19 @@ class ResearchTrainer(DefaultTrainer):
         has_eval = False
         
         # Method 1: Check _last_eval_results (set by evaluation hook)
+        # Only use if it was just updated THIS epoch (not stale from previous evaluations)
         if hasattr(self, '_last_eval_results') and self._last_eval_results:
+            # Check if this is fresh evaluation (should have mAP > 0 if just evaluated)
             current_mAP = float(self._last_eval_results.get('mAP', 0.0))
             current_top1 = float(self._last_eval_results.get('top-1', 0.0))
-            if current_mAP > 0.0:
-                has_eval = True
+            
+            # Only count as evaluation if EVAL_PERIOD says we should evaluate THIS epoch
+            next_epoch = epoch_num
+            if self.cfg.TEST.EVAL_PERIOD > 0 and next_epoch % self.cfg.TEST.EVAL_PERIOD == 0:
+                # This epoch should have evaluation - results are fresh
+                if current_mAP > 0.0:
+                    has_eval = True
+            # Otherwise results are stale from previous evaluation, don't use them
         
         # Method 2: Check storage (fallback)
         if not has_eval and hasattr(self, 'storage'):
