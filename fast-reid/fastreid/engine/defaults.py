@@ -300,7 +300,10 @@ class DefaultTrainer(TrainerBase):
         # some checkpoints may have more precise statistics than others.
 
         def test_and_save_results():
+            print("[TEST_AND_SAVE_RESULTS] Called!", flush=True)
+            print(f"[TEST_AND_SAVE_RESULTS] About to call self.test()", flush=True)
             self._last_eval_results = self.test(self.cfg, self.model)
+            print(f"[TEST_AND_SAVE_RESULTS] test() returned: {type(self._last_eval_results)}", flush=True)
             return self._last_eval_results
 
         # Do evaluation before checkpointer, because then if it fails,
