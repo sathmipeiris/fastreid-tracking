@@ -348,7 +348,16 @@ class EvalHook(HookBase):
         self._func = eval_function
 
     def _do_eval(self):
-        results = self._func()
+        logger = logging.getLogger(__name__)
+        logger.warning("[EvalHook._do_eval] Starting evaluation...")
+        
+        try:
+            results = self._func()
+        except Exception as e:
+            logger.error(f"[EvalHook._do_eval] Exception during evaluation: {type(e).__name__}: {str(e)}")
+            raise
+
+        logger.warning(f"[EvalHook._do_eval] Evaluation returned: {type(results)} with {len(results) if results else 0} keys")
 
         if results:
             assert isinstance(
@@ -356,6 +365,8 @@ class EvalHook(HookBase):
             ), "Eval function must return a dict. Got {} instead.".format(results)
 
             flattened_results = flatten_results_dict(results)
+            logger.warning(f"[EvalHook._do_eval] Flattened results: {list(flattened_results.keys())}")
+            
             for k, v in flattened_results.items():
                 try:
                     v = float(v)
@@ -368,6 +379,9 @@ class EvalHook(HookBase):
             
             # Store results for ResearchTrainer to access
             self.trainer._last_eval_results = flattened_results
+            logger.warning(f"[EvalHook._do_eval] Stored evaluation results for ResearchTrainer")
+        else:
+            logger.warning("[EvalHook._do_eval] Evaluation returned None or empty dict!")
 
         torch.cuda.empty_cache()
         # Evaluation may take different time among workers.
@@ -376,7 +390,10 @@ class EvalHook(HookBase):
 
     def after_epoch(self):
         next_epoch = self.trainer.epoch + 1
+        logger = logging.getLogger(__name__)
+        logger.warning(f"[EvalHook] after_epoch: current_epoch={self.trainer.epoch}, next_epoch={next_epoch}, period={self._period}, should_eval={next_epoch % self._period == 0}")
         if self._period > 0 and next_epoch % self._period == 0:
+            logger.warning(f"[EvalHook] Running evaluation at epoch {next_epoch}")
             self._do_eval()
 
     def after_train(self):

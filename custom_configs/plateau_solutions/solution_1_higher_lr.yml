@@ -19,6 +19,9 @@ DATASETS:
 DATALOADER:
   NUM_WORKERS: 0
 
+TEST:
+  EVAL_PERIOD: 2
+
 OUTPUT_DIR: logs/market1501/plateau_solver
 
 SOLVER:

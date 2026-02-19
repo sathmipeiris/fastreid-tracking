@@ -424,19 +424,28 @@ class DefaultTrainer(TrainerBase):
             dict: a dict of result metrics
         """
         logger = logging.getLogger(__name__)
+        logger.warning(f"[DefaultTrainer.test] Starting test with DATASETS.TESTS={cfg.DATASETS.TESTS}")
 
         results = OrderedDict()
         for idx, dataset_name in enumerate(cfg.DATASETS.TESTS):
             logger.info("Prepare testing set")
             try:
+                logger.warning(f"[DefaultTrainer.test] Building evaluator for dataset: {dataset_name}")
                 data_loader, evaluator = cls.build_evaluator(cfg, dataset_name)
+                logger.warning(f"[DefaultTrainer.test] Evaluator built successfully")
             except NotImplementedError:
                 logger.warn(
                     "No evaluator found. implement its `build_evaluator` method."
                 )
                 results[dataset_name] = {}
                 continue
+            except Exception as e:
+                logger.error(f"[DefaultTrainer.test] Exception building evaluator: {type(e).__name__}: {str(e)}")
+                raise
+            
+            logger.warning(f"[DefaultTrainer.test] Running inference on dataset: {dataset_name}")
             results_i = inference_on_dataset(model, data_loader, evaluator, flip_test=cfg.TEST.FLIP.ENABLED)
+            logger.warning(f"[DefaultTrainer.test] Inference complete, results: {list(results_i.keys()) if results_i else 'None'}")
             results[dataset_name] = results_i
 
             if comm.is_main_process():
@@ -452,6 +461,7 @@ class DefaultTrainer(TrainerBase):
         if len(results) == 1:
             results = list(results.values())[0]
 
+        logger.warning(f"[DefaultTrainer.test] Returning results: {type(results)}")
         return results
 
     @staticmethod
