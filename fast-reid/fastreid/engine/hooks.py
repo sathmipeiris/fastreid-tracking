@@ -348,16 +348,21 @@ class EvalHook(HookBase):
         self._func = eval_function
 
     def _do_eval(self):
+        print("[EVALHOOK_DOEVAL_START] Beginning evaluation", flush=True)
         logger = logging.getLogger(__name__)
         logger.warning("[EvalHook._do_eval] Starting evaluation...")
         
         try:
+            print("[EVALHOOK_CALLING_TEST_FUNC]", flush=True)
             results = self._func()
+            print(f"[EVALHOOK_TEST_FUNC_RETURNED] type={type(results)} empty={not results}", flush=True)
         except Exception as e:
+            print(f"[EVALHOOK_EXCEPTION] {type(e).__name__}: {str(e)}", flush=True)
             logger.error(f"[EvalHook._do_eval] Exception during evaluation: {type(e).__name__}: {str(e)}")
             raise
 
         logger.warning(f"[EvalHook._do_eval] Evaluation returned: {type(results)} with {len(results) if results else 0} keys")
+        print(f"[EVALHOOK_RESULT_SUMMARY] returned {type(results)} with keys: {list(results.keys()) if results else 'None'}", flush=True)
 
         if results:
             assert isinstance(
@@ -366,6 +371,7 @@ class EvalHook(HookBase):
 
             flattened_results = flatten_results_dict(results)
             logger.warning(f"[EvalHook._do_eval] Flattened results: {list(flattened_results.keys())}")
+            print(f"[EVALHOOK_FLATTENED_RESULTS] keys={list(flattened_results.keys())}", flush=True)
             
             for k, v in flattened_results.items():
                 try:
@@ -379,10 +385,13 @@ class EvalHook(HookBase):
             
             # Store results for ResearchTrainer to access
             self.trainer._last_eval_results = flattened_results
+            print(f"[EVALHOOK_STORED_RESULTS] Set trainer._last_eval_results", flush=True)
             logger.warning(f"[EvalHook._do_eval] Stored evaluation results for ResearchTrainer")
         else:
+            print("[EVALHOOK_NO_RESULTS] Evaluation returned None or empty dict!", flush=True)
             logger.warning("[EvalHook._do_eval] Evaluation returned None or empty dict!")
 
+        print("[EVALHOOK_DOEVAL_END] Evaluation complete", flush=True)
         torch.cuda.empty_cache()
         # Evaluation may take different time among workers.
         # A barrier make them start the next iteration together.
@@ -391,8 +400,11 @@ class EvalHook(HookBase):
     def after_epoch(self):
         next_epoch = self.trainer.epoch + 1
         logger = logging.getLogger(__name__)
+        # UNBYPASSABLE PRINT for debugging
+        print(f"[EVALHOOK_AFTER_EPOCH] epoch={self.trainer.epoch} next_epoch={next_epoch} period={self._period} should_eval={next_epoch % self._period == 0}", flush=True)
         logger.warning(f"[EvalHook] after_epoch: current_epoch={self.trainer.epoch}, next_epoch={next_epoch}, period={self._period}, should_eval={next_epoch % self._period == 0}")
         if self._period > 0 and next_epoch % self._period == 0:
+            print(f"[EVALHOOK_RUNNING_EVAL] At epoch {next_epoch}", flush=True)
             logger.warning(f"[EvalHook] Running evaluation at epoch {next_epoch}")
             self._do_eval()
 
