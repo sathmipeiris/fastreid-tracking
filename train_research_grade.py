@@ -208,6 +208,10 @@ class ResearchTrainer(DefaultTrainer):
     
     def after_epoch(self):
         """Called after each epoch - properly capture all available metrics."""
+        # CRITICAL: Call parent's after_epoch() to trigger hooks (including EvalHook)
+        # This must happen FIRST before we check for results
+        super().after_epoch()
+        
         if not comm.is_main_process():
             return
         
