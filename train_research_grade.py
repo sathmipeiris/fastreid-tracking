@@ -36,9 +36,10 @@ print("Framework loaded successfully", flush=True)
 try:
     from train_metric_plotter import ReIDMetricPlotter, generate_all_plots
     PLOTTER_AVAILABLE = True
-except ImportError:
+    print("[METRIC_PLOTTER] Successfully imported ReIDMetricPlotter", flush=True)
+except ImportError as e:
     PLOTTER_AVAILABLE = False
-    print("Warning: train_metric_plotter not available - no auto plots will be generated")
+    print(f"[METRIC_PLOTTER] Warning: train_metric_plotter not available - {str(e)}", flush=True)
 
 # Color codes for terminal output
 class Colors:
@@ -281,12 +282,21 @@ class ResearchTrainer(DefaultTrainer):
             # Generate metric plots after evaluation (only once per evaluation epoch)
             if PLOTTER_AVAILABLE:
                 try:
-                    history_file = Path(self.cfg.OUTPUT_DIR) / 'training_history.json'
+                    logger.info(f"  {Colors.BOLD}{Colors.CYAN}[PLOT_GEN_START] Attempting to generate plots...{Colors.ENDC}")
+                    history_file = Path(self.history_file)
+                    logger.info(f"  [PLOT_GEN] History file: {history_file}")
+                    logger.info(f"  [PLOT_GEN] History exists: {history_file.exists()}")
+                    logger.info(f"  [PLOT_GEN] Run dir: {self.run_dir}")
+                    
                     if history_file.exists():
-                        plot_output_dir = generate_all_plots(str(self.cfg.OUTPUT_DIR), str(history_file))
-                        logger.info(f"  {Colors.BOLD}{Colors.CYAN}📊 Plots saved to: {plot_output_dir}{Colors.ENDC}")
+                        plot_output_dir = generate_all_plots(str(self.run_dir), str(history_file))
+                        logger.info(f"  {Colors.BOLD}{Colors.GREEN}✓ 📊 Plots saved to: {plot_output_dir}{Colors.ENDC}")
+                    else:
+                        logger.warning(f"  [PLOT_GEN] History file doesn't exist: {history_file}")
                 except Exception as e:
-                    logger.debug(f"Plot generation skipped: {str(e)}")
+                    logger.error(f"  [PLOT_GEN_ERROR] Failed to generate plots: {str(e)}", exc_info=True)
+            else:
+                logger.info(f"  [PLOT_GEN] Plotter not available (PLOTTER_AVAILABLE={PLOTTER_AVAILABLE})")
             
             # Early stopping logic
             if current_mAP > self.best_mAP:
@@ -514,21 +524,27 @@ def main(args):
     if PLOTTER_AVAILABLE and comm.is_main_process():
         try:
             logger = logging.getLogger(__name__)
-            run_dir = trainer.cfg.OUTPUT_DIR if hasattr(trainer, 'cfg') else None
+            logger.info(f"\n[PLOT_GEN_FINAL] Starting final plot generation...")
+            run_dir = trainer.run_dir if hasattr(trainer, 'run_dir') else None
+            
+            logger.info(f"[PLOT_GEN_FINAL] Trainer run_dir: {run_dir}")
             
             if run_dir:
                 history_file = Path(run_dir) / 'training_history.json'
+                logger.info(f"[PLOT_GEN_FINAL] Looking for: {history_file}")
+                logger.info(f"[PLOT_GEN_FINAL] File exists: {history_file.exists()}")
+                
                 if history_file.exists():
                     logger.info(f"\n{Colors.BOLD}{Colors.CYAN}Generating metric plots...{Colors.ENDC}")
                     plot_output_dir = generate_all_plots(str(run_dir), str(history_file))
                     logger.info(f"{Colors.BOLD}{Colors.GREEN}✓ Metric plots saved to: {plot_output_dir}{Colors.ENDC}\n")
                 else:
-                    logger.warning(f"Training history file not found: {history_file}")
+                    logger.warning(f"[PLOT_GEN_FINAL] Training history file not found: {history_file}")
             else:
-                logger.warning("Cannot generate plots: OUTPUT_DIR not configured")
+                logger.warning("[PLOT_GEN_FINAL] Cannot generate plots: run_dir not configured")
         except Exception as e:
             logger = logging.getLogger(__name__)
-            logger.warning(f"Failed to generate metric plots: {str(e)}")
+            logger.error(f"[PLOT_GEN_FINAL_ERROR] Failed to generate final plots: {str(e)}", exc_info=True)
     
     return results
 
