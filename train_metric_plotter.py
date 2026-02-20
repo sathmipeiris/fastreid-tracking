@@ -8,6 +8,8 @@ Generates thesis-quality PNG graphs after each evaluation.
 import json
 import os
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend (prevents Tkinter threading issues)
 import matplotlib.pyplot as plt
 import seaborn as sns
 from pathlib import Path
