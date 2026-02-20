@@ -156,8 +156,7 @@ class ResearchTrainer(DefaultTrainer):
                 mode='max',  # Maximize mAP
                 factor=0.1,  # Reduce LR by 10x
                 patience=5,  # Wait 5 epochs without improvement
-                threshold=1e-4,  # Minimum improvement threshold
-                verbose=True
+                threshold=1e-4  # Minimum improvement threshold
             )
             self.has_scheduler = True
         except Exception as e:
