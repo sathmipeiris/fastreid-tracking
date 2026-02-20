@@ -306,10 +306,16 @@ class ResearchTrainer(DefaultTrainer):
             # Update learning rate scheduler based on mAP
             if self.has_scheduler:
                 try:
+                    current_lr = self.optimizer.param_groups[0]['lr']
                     self.lr_scheduler.step(current_mAP)
-                    logger.info(f"  {Colors.CYAN}LR Scheduler: Monitoring mAP for learning rate adjustment{Colors.ENDC}")
+                    new_lr = self.optimizer.param_groups[0]['lr']
+                    
+                    if new_lr < current_lr:
+                        logger.warning(f"  {Colors.RED}{Colors.BOLD}⚡ LR REDUCED: {current_lr:.2e} → {new_lr:.2e}{Colors.ENDC}")
+                    else:
+                        logger.info(f"  {Colors.CYAN}LR unchanged: {current_lr:.2e} (mAP {current_mAP:.4f}){Colors.ENDC}")
                 except Exception as e:
-                    logger.debug(f"LR scheduler step failed: {str(e)}")
+                    logger.error(f"  LR scheduler step failed: {str(e)}")
             
             # Generate metric plots after evaluation (only once per evaluation epoch)
             if PLOTTER_AVAILABLE:
