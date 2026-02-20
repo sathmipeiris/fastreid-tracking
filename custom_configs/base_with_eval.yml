@@ -1,4 +1,4 @@
-# Base configuration for plateau solutions - evaluation disabled for Windows
+# Base configuration for plateau solutions - evaluation enabled
 _BASE_: ../fast-reid/configs/Base-bagtricks.yml
 
 # Enable evaluation every 2 epochs to match checkpoint period
@@ -6,6 +6,8 @@ TEST:
   EVAL_PERIOD: 2
   IMS_PER_BATCH: 128
 
-# Reduce logging noise
+# Reduce logging noise and disable AMP (incompatible with current training loop)
 SOLVER:
   CHECKPOINT_PERIOD: 2
+  AMP:
+    ENABLED: False
