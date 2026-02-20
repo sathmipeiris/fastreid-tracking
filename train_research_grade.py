@@ -148,6 +148,23 @@ class ResearchTrainer(DefaultTrainer):
         self.patience = cfg.SOLVER.EARLY_STOP_PATIENCE
         self.max_epoch = cfg.SOLVER.MAX_EPOCH
         
+        # Setup ReduceLROnPlateau scheduler to reduce LR when mAP plateaus
+        try:
+            from torch.optim.lr_scheduler import ReduceLROnPlateau
+            self.lr_scheduler = ReduceLROnPlateau(
+                self.optimizer,
+                mode='max',  # Maximize mAP
+                factor=0.1,  # Reduce LR by 10x
+                patience=5,  # Wait 5 epochs without improvement
+                threshold=1e-4,  # Minimum improvement threshold
+                verbose=True
+            )
+            self.has_scheduler = True
+        except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Could not setup ReduceLROnPlateau scheduler: {str(e)}")
+            self.has_scheduler = False
+        
         logger = logging.getLogger(__name__)
         
         # Beautiful header
@@ -227,10 +244,18 @@ class ResearchTrainer(DefaultTrainer):
         logger = logging.getLogger(__name__)
         epoch_num = self.epoch + 1
         
-        # Display progress bar every epoch
+        # Get loss from storage
+        current_loss = 0.0
+        if hasattr(self, 'storage'):
+            latest = self.storage.latest()
+            if latest and 'total_loss' in latest:
+                current_loss = extract_metric_value(latest.get('total_loss', 0.0))
+        
+        # Display progress bar with loss
         progress_bar = self.display_progress_bar(epoch_num, self.max_epoch)
+        loss_str = f"Loss: {Colors.YELLOW}{current_loss:.4f}{Colors.ENDC}" if current_loss > 0 else ""
         logger.info(f"")
-        logger.info(f"{Colors.BOLD}{Colors.BLUE}Epoch {epoch_num}/{self.max_epoch}{Colors.ENDC} {progress_bar}")
+        logger.info(f"{Colors.BOLD}{Colors.BLUE}Epoch {epoch_num}/{self.max_epoch}{Colors.ENDC} {progress_bar} {loss_str}")
         
         # Try multiple ways to get evaluation results
         current_mAP = 0.0
@@ -278,6 +303,14 @@ class ResearchTrainer(DefaultTrainer):
             self.training_history['epoch'].append(epoch_num)
             self.training_history['mAP'].append(current_mAP)
             self.training_history['top1'].append(current_top1)
+            
+            # Update learning rate scheduler based on mAP
+            if self.has_scheduler:
+                try:
+                    self.lr_scheduler.step(current_mAP)
+                    logger.info(f"  {Colors.CYAN}LR Scheduler: Monitoring mAP for learning rate adjustment{Colors.ENDC}")
+                except Exception as e:
+                    logger.debug(f"LR scheduler step failed: {str(e)}")
             
             # Generate metric plots after evaluation (only once per evaluation epoch)
             if PLOTTER_AVAILABLE:
