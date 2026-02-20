@@ -1,0 +1,47 @@
+# Diagnostic test with proper triplet loss configuration
+# 4 epochs to quickly test if model learns at all
+_BASE_: ./base_with_eval.yml
+
+MODEL:
+  BACKBONE:
+    WITH_IBN: True
+    PRETRAIN: True  # CRITICAL: Must be True for small datasets
+  HEADS:
+    WITH_BNNECK: True
+  LOSSES:
+    NAME: ("CrossEntropyLoss", "TripletLoss",)
+    CE:
+      SCALE: 1.0  # Standard weight for classification
+    TRI:
+      MARGIN: 0.3  # Standard triplet margin
+      HARD_MINING: True
+      SCALE: 1.0   # Standard weight for triplet
+
+DATASETS:
+  NAMES: ("Market1501",)
+  TESTS: ("Market1501",)
+
+DATALOADER:
+  SAMPLER_TRAIN: "BalancedIdentitySampler"
+  NUM_INSTANCE: 4  # Critical: 4 instances per identity
+  NUM_WORKERS: 0
+
+OUTPUT_DIR: logs/market1501/diagnostic_4epoch_proper
+
+SOLVER:
+  OPT: Adam  # Standard optimizer
+  MAX_EPOCH: 4
+  IMS_PER_BATCH: 16  # CRITICAL: 4 identities × 4 instances = 16 batch size
+  BASE_LR: 0.00035  # Standard baseline learning rate
+  AMP:
+    ENABLED: False
+  WARMUP_ITERS: 500  # Reduced warmup for 4-epoch test
+  WARMUP_FACTOR: 0.1
+  SCHED: MultiStepLR
+  STEPS: [3]  # LR decay at epoch 3 for 4-epoch test
+
+TEST:
+  EVAL_PERIOD: 2
+  IMS_PER_BATCH: 128
+
+CUDNN_BENCHMARK: True

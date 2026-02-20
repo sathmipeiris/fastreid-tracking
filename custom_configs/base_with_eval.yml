@@ -1,6 +1,14 @@
 # Base configuration for plateau solutions - evaluation enabled
 _BASE_: ../fast-reid/configs/Base-bagtricks.yml
 
+# CRITICAL FIX: Use BalancedIdentitySampler for Triplet Loss
+# Triplet loss REQUIRES multiple images per identity in each batch
+# NaiveIdentitySampler (default) breaks triplet loss by not guaranteeing positive pairs
+DATALOADER:
+  SAMPLER_TRAIN: "BalancedIdentitySampler"
+  NUM_INSTANCE: 4
+  NUM_WORKERS: 0
+
 # Enable evaluation every 2 epochs to match checkpoint period
 TEST:
   EVAL_PERIOD: 2

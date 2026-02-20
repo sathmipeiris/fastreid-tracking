@@ -17,6 +17,8 @@ DATASETS:
   TESTS: ("Market1501",)
 
 DATALOADER:
+  SAMPLER_TRAIN: "BalancedIdentitySampler"
+  NUM_INSTANCE: 4
   NUM_WORKERS: 0
 
 TEST:
