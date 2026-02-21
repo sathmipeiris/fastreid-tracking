@@ -7,10 +7,10 @@ _BASE_: ../fast-reid/configs/Base-bagtricks.yml
 MODEL:
   BACKBONE:
     NAME: build_resnet_backbone
-    DEPTH: 34x  # CRITICAL: ResNet-34 (36 layers), not 50
-    FEAT_DIM: 1024  # CRITICAL: 1024 features, not 2048
+    DEPTH: 34x
+    FEAT_DIM: 1024
     LAST_STRIDE: 1
-    WITH_IBN: True  # Instance Norm helps with small batches
+    WITH_IBN: True
     PRETRAIN: True
     
   HEADS:
@@ -44,42 +44,36 @@ INPUT:
     ENABLED: True
 
 DATALOADER:
-  SAMPLER_TRAIN: "BalancedIdentitySampler"  # CRITICAL FIX
+  SAMPLER_TRAIN: "BalancedIdentitySampler"
   NUM_INSTANCE: 4
-  NUM_WORKERS: 0  # Windows
-  IMS_PER_BATCH: 32  # Increased: 8 people × 4 instances = 32 (stronger gradients)
+  NUM_WORKERS: 0
 
 SOLVER:
   AMP:
-    ENABLED: False  # Disable for stability with smaller model
+    ENABLED: False
   OPT: Adam
   MAX_EPOCH: 100
+  IMS_PER_BATCH: 32
   BASE_LR: 0.00035
   WEIGHT_DECAY: 0.0005
   WEIGHT_DECAY_NORM: 0.0005
-  
   WARMUP_FACTOR: 0.1
-  WARMUP_ITERS: 500  # Reduced warmup for faster learning
-  
+  WARMUP_ITERS: 500
   SCHED: MultiStepLR
-  STEPS: [40, 70, 90]  # Learning rate decay schedule
+  STEPS: [40, 70, 90]
   GAMMA: 0.1
-  
   CHECKPOINT_PERIOD: 10
+  EARLY_STOP_PATIENCE: 15
 
 TEST:
-  EVAL_PERIOD: 5  # Evaluate every 5 epochs (faster development cycle)
+  EVAL_PERIOD: 5
   IMS_PER_BATCH: 128
 
 CUDNN_BENCHMARK: True
 
-# Output
 DATASETS:
   NAMES: ("Market1501",)
   TESTS: ("Market1501",)
 
 OUTPUT_DIR: logs/market1501/optimal_architecture
 
-# Early stopping
-SOLVER:
-  EARLY_STOP_PATIENCE: 15
