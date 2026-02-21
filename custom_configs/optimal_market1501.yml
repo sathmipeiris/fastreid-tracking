@@ -1,0 +1,85 @@
+# Optimized Architecture for Market-1501
+# Addresses fundamental scaling: 751 identities requires ResNet-34, not ResNet-50
+# Feature dimension reduced to 1024 (not 2048) to prevent overfitting
+
+_BASE_: ../fast-reid/configs/Base-bagtricks.yml
+
+MODEL:
+  BACKBONE:
+    NAME: build_resnet_backbone
+    DEPTH: 34x  # CRITICAL: ResNet-34 (36 layers), not 50
+    FEAT_DIM: 1024  # CRITICAL: 1024 features, not 2048
+    LAST_STRIDE: 1
+    WITH_IBN: True  # Instance Norm helps with small batches
+    PRETRAIN: True
+    
+  HEADS:
+    NAME: EmbeddingHead
+    NORM: BN
+    WITH_BNNECK: True
+    POOL_LAYER: GlobalAvgPool
+    NECK_FEAT: before
+    CLS_LAYER: Linear
+
+  LOSSES:
+    NAME: ("CrossEntropyLoss", "TripletLoss",)
+    CE:
+      EPSILON: 0.1
+      SCALE: 1.0
+    TRI:
+      MARGIN: 0.3
+      HARD_MINING: True
+      NORM_FEAT: False
+      SCALE: 1.0
+
+INPUT:
+  SIZE_TRAIN: [256, 128]
+  SIZE_TEST: [256, 128]
+  REA:
+    ENABLED: True
+    PROB: 0.5
+  FLIP:
+    ENABLED: True
+  PADDING:
+    ENABLED: True
+
+DATALOADER:
+  SAMPLER_TRAIN: "BalancedIdentitySampler"  # CRITICAL FIX
+  NUM_INSTANCE: 4
+  NUM_WORKERS: 0  # Windows
+  IMS_PER_BATCH: 32  # Increased: 8 people × 4 instances = 32 (stronger gradients)
+
+SOLVER:
+  AMP:
+    ENABLED: False  # Disable for stability with smaller model
+  OPT: Adam
+  MAX_EPOCH: 100
+  BASE_LR: 0.00035
+  WEIGHT_DECAY: 0.0005
+  WEIGHT_DECAY_NORM: 0.0005
+  
+  WARMUP_FACTOR: 0.1
+  WARMUP_ITERS: 500  # Reduced warmup for faster learning
+  
+  SCHED: MultiStepLR
+  STEPS: [40, 70, 90]  # Learning rate decay schedule
+  GAMMA: 0.1
+  
+  CHECKPOINT_PERIOD: 10
+
+TEST:
+  EVAL_PERIOD: 5  # Evaluate every 5 epochs (faster development cycle)
+  IMS_PER_BATCH: 128
+
+CUDNN_BENCHMARK: True
+
+# Output
+DATASETS:
+  NAMES: ("Market1501",)
+  TESTS: ("Market1501",)
+
+OUTPUT_DIR: logs/market1501/optimal_architecture
+
+# Early stopping
+SOLVER:
+  EARLY_STOP_PATIENCE: 15
