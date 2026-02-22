@@ -523,6 +523,44 @@ def setup(args):
     return cfg
 
 
+def load_torchvision_pretrained(model, model_name='resnet18'):
+    """
+    Load official PyTorch ImageNet pretrained weights into ReID model.
+    This is a failsafe to ensure weights are loaded when fast-reid's auto-download fails.
+    """
+    try:
+        import torchvision.models as models
+        logger = logging.getLogger(__name__)
+        
+        logger.info(f"\n🔧 MANUAL PRETRAINED LOADING: Loading {model_name} from torchvision...")
+        
+        # Load official pretrained model
+        if model_name == 'resnet18':
+            pretrained_model = models.resnet18(weights=models.ResNet18_Weights.IMAGENET1K_V1)
+        elif model_name == 'resnet34':
+            pretrained_model = models.resnet34(weights=models.ResNet34_Weights.IMAGENET1K_V1)
+        elif model_name == 'resnet50':
+            pretrained_model = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1)
+        else:
+            logger.warning(f"Unsupported model: {model_name}, skipping pretrain")
+            return model
+        
+        pretrained_dict = pretrained_model.state_dict()
+        model_dict = model.state_dict()
+        
+        # Load matching weights
+        matched = {k: v for k, v in pretrained_dict.items() if k in model_dict and v.shape == model_dict[k].shape}
+        model_dict.update(matched)
+        model.load_state_dict(model_dict)
+        
+        logger.info(f"✅ Loaded {len(matched)} pretrained weights from torchvision {model_name}")
+        return model
+    except Exception as e:
+        logger = logging.getLogger(__name__)
+        logger.warning(f"⚠️  Could not load torchvision pretrained weights: {str(e)}")
+        return model
+
+
 def main(args):
     cfg = setup(args)
     
@@ -556,6 +594,12 @@ def main(args):
     )
     
     trainer.resume_or_load(resume=args.resume)
+    
+    # CRITICAL: Manually load pretrained weights as failsafe
+    # This ensures ImageNet weights are loaded even if fast-reid's auto-download fails
+    model_name = cfg.MODEL.BACKBONE.DEPTH.replace('x', '')
+    if cfg.MODEL.BACKBONE.PRETRAIN:
+        trainer.model = load_torchvision_pretrained(trainer.model, f'resnet{model_name}')
     results = trainer.train()
     
     # Generate metric plots after training completes
