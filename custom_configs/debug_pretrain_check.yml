@@ -1,0 +1,77 @@
+# Debug config to verify ImageNet pretrained weights are loaded
+# This config explicitly logs pretrain behavior
+
+_BASE_: ../fast-reid/configs/Base-bagtricks.yml
+
+MODEL:
+  BACKBONE:
+    DEPTH: 18x
+    FEAT_DIM: 512
+    LAST_STRIDE: 1
+    WITH_IBN: True
+    PRETRAIN: True
+    # IMPORTANT: If you have local pretrained weights, set PRETRAIN_PATH:
+    # PRETRAIN_PATH: "/path/to/resnet18_ibn_imagenet.pth"
+    
+  HEADS:
+    NAME: EmbeddingHead
+    NORM: BN
+    WITH_BNNECK: True
+    POOL_LAYER: GlobalAvgPool
+    NECK_FEAT: before
+    CLS_LAYER: Linear
+
+  LOSSES:
+    NAME: ("CrossEntropyLoss", "TripletLoss",)
+    CE:
+      EPSILON: 0.1
+      SCALE: 1.0
+    TRI:
+      MARGIN: 0.3
+      HARD_MINING: True
+      NORM_FEAT: False
+      SCALE: 1.0
+
+INPUT:
+  SIZE_TRAIN: [256, 128]
+  SIZE_TEST: [256, 128]
+  REA:
+    ENABLED: True
+    PROB: 0.5
+  FLIP:
+    ENABLED: True
+  PADDING:
+    ENABLED: True
+
+DATALOADER:
+  SAMPLER_TRAIN: "BalancedIdentitySampler"
+  NUM_INSTANCE: 4
+  NUM_WORKERS: 0
+
+SOLVER:
+  AMP:
+    ENABLED: False
+  OPT: Adam
+  MAX_EPOCH: 5
+  IMS_PER_BATCH: 32
+  BASE_LR: 0.0005
+  WEIGHT_DECAY: 0.0005
+  WEIGHT_DECAY_NORM: 0.0005
+  WARMUP_FACTOR: 0.1
+  WARMUP_ITERS: 300
+  SCHED: MultiStepLR
+  STEPS: [4]
+  GAMMA: 0.1
+  CHECKPOINT_PERIOD: 1
+
+TEST:
+  EVAL_PERIOD: 1
+  IMS_PER_BATCH: 128
+
+CUDNN_BENCHMARK: True
+
+DATASETS:
+  NAMES: ("Market1501",)
+  TESTS: ("Market1501",)
+
+OUTPUT_DIR: logs/market1501/debug_pretrain
