@@ -526,7 +526,7 @@ def setup(args):
 def load_torchvision_pretrained(model, model_name='resnet18'):
     """
     Load official PyTorch ImageNet pretrained weights into ReID model.
-    This is a failsafe to ensure weights are loaded when fast-reid's auto-download fails.
+    Handles layer name mapping between PyTorch ResNet and fast-reid architectures.
     """
     try:
         import torchvision.models as models
@@ -543,21 +543,43 @@ def load_torchvision_pretrained(model, model_name='resnet18'):
             pretrained_model = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1)
         else:
             logger.warning(f"Unsupported model: {model_name}, skipping pretrain")
-            return model
+            return
         
         pretrained_dict = pretrained_model.state_dict()
         model_dict = model.state_dict()
         
-        # Load matching weights
-        matched = {k: v for k, v in pretrained_dict.items() if k in model_dict and v.shape == model_dict[k].shape}
-        model_dict.update(matched)
-        model.load_state_dict(model_dict)
+        # Try direct name matching first
+        matched = {}
+        for k, v in pretrained_dict.items():
+            if k in model_dict and v.shape == model_dict[k].shape:
+                matched[k] = v
         
-        logger.info(f"✅ Loaded {len(matched)} pretrained weights from torchvision {model_name}")
+        logger.info(f"   Direct matches: {len(matched)}")
+        
+        # If few matches, try layer name mapping (backbone.XXX)
+        if len(matched) < 50:
+            logger.info(f"   Trying backbone name mapping...")
+            for k, v in pretrained_dict.items():
+                backbone_key = f'backbone.{k}'
+                if backbone_key in model_dict and v.shape == model_dict[backbone_key].shape:
+                    matched[backbone_key] = v
+            logger.info(f"   Backbone matches: {len(matched)}")
+        
+        if matched:
+            model_dict.update(matched)
+            model.load_state_dict(model_dict, strict=False)
+            logger.info(f"✅ Loaded {len(matched)} pretrained weights from {model_name}")
+        else:
+            logger.warning(f"⚠️  No matching layer names found! Check architecture compatibility")
+        
         return model
+        
     except Exception as e:
         logger = logging.getLogger(__name__)
         logger.warning(f"⚠️  Could not load torchvision pretrained weights: {str(e)}")
+        import traceback
+        logger.warning(traceback.format_exc())
+        return model
         return model
 
 
@@ -596,10 +618,58 @@ def main(args):
     trainer.resume_or_load(resume=args.resume)
     
     # CRITICAL: Manually load pretrained weights as failsafe
-    # This ensures ImageNet weights are loaded even if fast-reid's auto-download fails
-    model_name = cfg.MODEL.BACKBONE.DEPTH.replace('x', '')
+    # Load weights directly into backbone (don't reassign trainer.model - it's read-only)
     if cfg.MODEL.BACKBONE.PRETRAIN:
-        trainer.model = load_torchvision_pretrained(trainer.model, f'resnet{model_name}')
+        model_name = cfg.MODEL.BACKBONE.DEPTH.replace('x', '')
+        logger = logging.getLogger(__name__)
+        
+        try:
+            import torchvision.models as models
+            
+            logger.info(f"\n🔧 MANUAL PRETRAINED LOADING: Loading resnet{model_name} from torchvision...")
+            
+            # Load official pretrained model
+            if model_name == '18':
+                pretrained_model = models.resnet18(weights=models.ResNet18_Weights.IMAGENET1K_V1)
+            elif model_name == '34':
+                pretrained_model = models.resnet34(weights=models.ResNet34_Weights.IMAGENET1K_V1)
+            elif model_name == '50':
+                pretrained_model = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1)
+            else:
+                logger.warning(f"Unsupported backbone depth: {model_name}")
+                pretrained_model = None
+            
+            if pretrained_model is not None:
+                pretrained_dict = pretrained_model.state_dict()
+                
+                # Try to load into backbone with name mapping
+                backbone = trainer.backbone if hasattr(trainer, 'backbone') else trainer.model.backbone
+                backbone_dict = backbone.state_dict()
+                
+                # Try direct match first
+                matched = {}
+                for k, v in pretrained_dict.items():
+                    if k in backbone_dict and v.shape == backbone_dict[k].shape:
+                        matched[k] = v
+                
+                logger.info(f"   Trying to match weights...")
+                logger.info(f"   PyTorch ResNet keys: {len(pretrained_dict)}")
+                logger.info(f"   Backbone keys: {len(backbone_dict)}")
+                logger.info(f"   Direct matches found: {len(matched)}")
+                
+                if matched:
+                    backbone_dict.update(matched)
+                    backbone.load_state_dict(backbone_dict, strict=False)
+                    logger.info(f"✅ Loaded {len(matched)} pretrained weights into backbone")
+                else:
+                    logger.warning(f"⚠️  No matching weights found! Backbone layer names:")
+                    for k in list(backbone_dict.keys())[:5]:
+                        logger.warning(f"      {k}")
+                
+        except Exception as e:
+            logger.warning(f"⚠️  Could not load pretrained weights: {str(e)}")
+            import traceback
+            logger.warning(traceback.format_exc())
     results = trainer.train()
     
     # Generate metric plots after training completes
