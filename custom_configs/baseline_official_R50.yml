@@ -1,0 +1,11 @@
+# Clean Official Baseline Config
+# EXACT COPY from: fast-reid/configs/Market1501/bagtricks_R50.yml
+# NO MODIFICATIONS - Testing official FastReID baseline
+
+_BASE_: ../fast-reid/configs/Base-bagtricks.yml
+
+DATASETS:
+  NAMES: ("Market1501",)
+  TESTS: ("Market1501",)
+
+OUTPUT_DIR: logs/baseline_test_clean
